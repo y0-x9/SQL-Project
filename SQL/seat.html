@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seat Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="seat">
+  <header class="site-header">
+    <a class="brand" href="index.html"><img src="assets/p1.webp" alt="Airline Logo" class="brand-logo"><span>Airline System</span></a>
+    <button class="nav-toggle" onclick="this.nextElementSibling.classList.toggle('open')">Menu</button>
+    <nav class="site-nav">
+      <a href="index.html">Home</a><a href="passenger.html">Passenger</a><a href="airport.html">Airport</a>
+      <a href="aircraft.html">Aircraft</a><a href="flight.html">Flight</a><a class="active" href="seat.html">Seat</a>
+      <a href="booking.html">Booking</a><a href="crewmember.html">Crew Member</a><a href="payment.html">Payment</a><a href="reports.html">Reports</a>
+    </nav>
+  </header>
+  <div class="section">
+    <div class="page-title" style="margin-bottom:1.5rem;"><p class="eyebrow">Management</p><h1>Seat</h1></div>
+    <div class="form-panel">
+      <div class="panel-heading">
+        <h2 style="margin:0;">Seat Details</h2>
+        <span id="form-mode-badge" class="status-pill status-current">Add Mode</span>
+      </div>
+      <div class="feature-grid">
+        <div><label>Seat ID</label><input type="number" id="seat_id"></div>
+        <div><label>Seat Number</label><input type="text" id="seat_number" placeholder="e.g. 14A"></div>
+        <div><label>Class Type</label>
+          <select id="class_type">
+            <option value="">Select Class</option>
+            <option value="Economy">Economy</option>
+            <option value="Business">Business</option>
+            <option value="First Class">First Class</option>
+          </select>
+        </div>
+        <div><label>Availability Status</label>
+          <select id="availability_status">
+            <option value="">Select Status</option>
+            <option value="Available">Available</option>
+            <option value="Booked">Booked</option>
+            <option value="Reserved">Reserved</option>
+          </select>
+        </div>
+        <div><label>Aircraft ID</label><input type="number" id="aircraft_id"></div>
+      </div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:1rem;">
+        <button class="button buttonsecondary" onclick="addRecord()">Add</button>
+        <button class="button buttonsecondary" onclick="updateRecord()">Update</button>
+        <button class="button buttonprimary" onclick="deleteRecord()">Delete</button>
+        <button class="button buttonsecondary" onclick="clearForm()">Clear</button>
+      </div>
+      <p id="form-message" class="form-message"></p>
+    </div>
+    <div class="table-panel" style="margin-top:1.4rem;">
+      <div class="panel-heading">
+        <h2 style="margin:0;">All Seats</h2>
+        <button class="button buttonsecondary" onclick="loadRecords()" style="padding:0.4rem 0.8rem;font-size:0.88rem;">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>ID</th><th>Seat Number</th><th>Class</th><th>Availability</th><th>Aircraft ID</th></tr></thead>
+        <tbody id="records-body"><tr><td colspan="5" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+  <footer class="site-footer"><p>&copy; 2026 Airline System. All rights reserved.</p></footer>
+  <script>
+    const API='seat_api.php';
+    const FIELDS=['seat_id','seat_number','class_type','availability_status','aircraft_id'];
+    async function loadRecords(){
+      const tbody=document.getElementById('records-body');
+      tbody.innerHTML='<tr><td colspan="5" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+      try{
+        const data=await(await fetch(API+'?action=getAll')).json();
+        if(!data.length){tbody.innerHTML='<tr><td colspan="5" class="muted" style="text-align:center;padding:2rem;">No records found.</td></tr>';return;}
+        tbody.innerHTML=data.map(r=>`<tr style="cursor:pointer;" onclick='fillForm(${JSON.stringify(r)})'><td>${r.seat_id}</td><td>${r.seat_number}</td><td>${r.class_type}</td><td><span class="status-pill ${stClass(r.availability_status)}">${r.availability_status}</span></td><td>${r.aircraft_id}</td></tr>`).join('');
+      }catch(e){tbody.innerHTML='<tr><td colspan="5" style="color:var(--red-dark);text-align:center;padding:2rem;">Failed to load records.</td></tr>';}
+    }
+    function fillForm(r){FIELDS.forEach(f=>document.getElementById(f).value=r[f]||'');badge('Edit Mode','status-planned');}
+    async function addRecord(){const fd=build('add');if(!fd)return;post(fd);}
+    async function updateRecord(){const fd=build('update');if(!fd)return;post(fd);}
+    async function deleteRecord(){
+      const id=document.getElementById('seat_id').value;
+      if(!id){setMessage('Click a row first.','error');return;}
+      if(!confirm('Delete seat ID '+id+'?'))return;
+      const fd=new FormData();fd.append('action','delete');fd.append('seat_id',id);post(fd);
+    }
+    async function post(fd){
+      const data=await(await fetch(API,{method:'POST',body:fd})).json();
+      setMessage(data.message||data.error,data.success?'success':'error');
+      if(data.success){clearForm();loadRecords();}
+    }
+    function build(action){
+      for(const f of FIELDS){if(!document.getElementById(f).value){setMessage('Please fill in all fields.','error');return null;}}
+      const fd=new FormData();fd.append('action',action);FIELDS.forEach(f=>fd.append(f,document.getElementById(f).value));return fd;
+    }
+    function clearForm(){FIELDS.forEach(f=>document.getElementById(f).value='');badge('Add Mode','status-current');setMessage('','');}
+    function badge(t,c){const el=document.getElementById('form-mode-badge');el.textContent=t;el.className='status-pill '+c;setMessage('','');}
+    function setMessage(msg,type){const el=document.getElementById('form-message');el.textContent=msg;el.className='form-message'+(type?' '+type:'');}
+    function stClass(s){if(s==='Available')return'status-completed';if(s==='Reserved')return'status-current';return'status-planned';}
+    loadRecords();
+  </script>
+</body>
+</html>

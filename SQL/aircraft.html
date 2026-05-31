@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aircraft Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="aircraft">
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <img src="assets/p1.webp" alt="Airline Logo" class="brand-logo">
+      <span>Airline System</span>
+    </a>
+    <button class="nav-toggle" onclick="this.nextElementSibling.classList.toggle('open')">Menu</button>
+    <nav class="site-nav">
+      <a href="index.html">Home</a>
+      <a href="passenger.html">Passenger</a>
+      <a href="airport.html">Airport</a>
+      <a class="active" href="aircraft.html">Aircraft</a>
+      <a href="flight.html">Flight</a>
+      <a href="seat.html">Seat</a>
+      <a href="booking.html">Booking</a>
+      <a href="crewmember.html">Crew Member</a>
+      <a href="payment.html">Payment</a>
+      <a href="reports.html">Reports</a>
+    </nav>
+  </header>
+  <div class="section">
+    <div class="page-title" style="margin-bottom:1.5rem;">
+      <p class="eyebrow">Management</p>
+      <h1>Aircraft</h1>
+    </div>
+    <div class="form-panel">
+      <div class="panel-heading">
+        <h2 style="margin:0;">Aircraft Details</h2>
+        <span id="form-mode-badge" class="status-pill status-current">Add Mode</span>
+      </div>
+      <div class="feature-grid">
+        <div>
+          <label>Aircraft ID</label>
+          <input type="number" id="aircraft_id" placeholder="e.g. 101">
+        </div>
+        <div>
+          <label>Model</label>
+          <input type="text" id="model" placeholder="e.g. Boeing 737">
+        </div>
+        <div>
+          <label>Manufacturer</label>
+          <input type="text" id="manufacturer" placeholder="e.g. Boeing">
+        </div>
+        <div>
+          <label>Capacity</label>
+          <input type="number" id="capacity" placeholder="e.g. 180">
+        </div>
+        <div>
+          <label>Registration No</label>
+          <input type="text" id="registration_no" placeholder="e.g. A6-ENA">
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="status">
+            <option value="">Select Status</option>
+            <option value="Active">Active</option>
+            <option value="Maintenance">Maintenance</option>
+            <option value="Retired">Retired</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:1rem;">
+        <button class="button buttonsecondary" onclick="addRecord()">Add</button>
+        <button class="button buttonsecondary" onclick="updateRecord()">Update</button>
+        <button class="button buttonprimary"   onclick="deleteRecord()">Delete</button>
+        <button class="button buttonsecondary" onclick="clearForm()">Clear</button>
+      </div>
+      <p id="form-message" class="form-message"></p>
+    </div>
+    <div class="table-panel" style="margin-top:1.4rem;">
+      <div class="panel-heading">
+        <h2 style="margin:0;">All Aircraft</h2>
+        <button class="button buttonsecondary" onclick="loadRecords()" style="padding:0.4rem 0.8rem;font-size:0.88rem;">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table id="records-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Model</th><th>Manufacturer</th><th>Capacity</th><th>Registration No</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="records-body">
+            <tr><td colspan="6" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <footer class="site-footer"><p>&copy; 2026 Airline System. All rights reserved.</p></footer>
+  <script>
+    const API='aircraft_api.php';
+    async function loadRecords(){
+      const tbody=document.getElementById('records-body');
+      tbody.innerHTML='<tr><td colspan="6" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+      try{
+        const res=await fetch(API+'?action=getAll');
+        const data=await res.json();
+        if(!data.length){tbody.innerHTML='<tr><td colspan="6" class="muted" style="text-align:center;padding:2rem;">No records found.</td></tr>';return;}
+        tbody.innerHTML=data.map(r=>`<tr style="cursor:pointer;" onclick='fillForm(${JSON.stringify(r)})'><td>${r.aircraft_id}</td><td>${r.model}</td><td>${r.manufacturer}</td><td>${r.capacity}</td><td>${r.registration_no}</td><td><span class="status-pill ${statusClass(r.status)}">${r.status}</span></td></tr>`).join('');
+      }catch(e){tbody.innerHTML='<tr><td colspan="6" style="color:var(--red-dark);text-align:center;padding:2rem;">Failed to load. Make sure aircraft_api.php is running.</td></tr>';}
+    }
+    function fillForm(r){
+      document.getElementById('aircraft_id').value=r.aircraft_id;
+      document.getElementById('model').value=r.model;
+      document.getElementById('manufacturer').value=r.manufacturer;
+      document.getElementById('capacity').value=r.capacity;
+      document.getElementById('registration_no').value=r.registration_no;
+      document.getElementById('status').value=r.status;
+      document.getElementById('form-mode-badge').textContent='Edit Mode';
+      document.getElementById('form-mode-badge').className='status-pill status-planned';
+      setMessage('','');
+    }
+    async function addRecord(){
+      const body=buildFormData('add');if(!body)return;
+      const data=await(await fetch(API,{method:'POST',body})).json();
+      setMessage(data.message||data.error,data.success?'success':'error');
+      if(data.success){clearForm();loadRecords();}
+    }
+    async function updateRecord(){
+      const body=buildFormData('update');if(!body)return;
+      const data=await(await fetch(API,{method:'POST',body})).json();
+      setMessage(data.message||data.error,data.success?'success':'error');
+      if(data.success){clearForm();loadRecords();}
+    }
+    async function deleteRecord(){
+      const id=document.getElementById('aircraft_id').value;
+      if(!id){setMessage('Click a row first to select a record.','error');return;}
+      if(!confirm('Delete aircraft ID '+id+'?'))return;
+      const body=new FormData();body.append('action','delete');body.append('aircraft_id',id);
+      const data=await(await fetch(API,{method:'POST',body})).json();
+      setMessage(data.message||data.error,data.success?'success':'error');
+      if(data.success){clearForm();loadRecords();}
+    }
+    function buildFormData(action){
+      const fields=['aircraft_id','model','manufacturer','capacity','registration_no','status'];
+      for(const f of fields){if(!document.getElementById(f).value){setMessage('Please fill in all fields.','error');return null;}}
+      const fd=new FormData();fd.append('action',action);
+      fields.forEach(f=>fd.append(f,document.getElementById(f).value));return fd;
+    }
+    function clearForm(){
+      ['aircraft_id','model','manufacturer','capacity','registration_no','status'].forEach(f=>document.getElementById(f).value='');
+      document.getElementById('form-mode-badge').textContent='Add Mode';
+      document.getElementById('form-mode-badge').className='status-pill status-current';
+      setMessage('','');
+    }
+    function setMessage(msg,type){const el=document.getElementById('form-message');el.textContent=msg;el.className='form-message'+(type?' '+type:'');}
+    function statusClass(s){if(s==='Active')return'status-completed';if(s==='Maintenance')return'status-current';return'status-planned';}
+    loadRecords();
+  </script>
+</body>
+</html>

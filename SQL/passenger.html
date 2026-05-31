@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Passenger Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="passenger">
+
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <img src="assets/p1.webp" alt="Airline Logo" class="brand-logo">
+      <span>Airline System</span>
+    </a>
+    <button class="nav-toggle" onclick="this.nextElementSibling.classList.toggle('open')">Menu</button>
+    <nav class="site-nav">
+      <a href="index.html">Home</a>
+      <a class="active" href="passenger.html">Passenger</a>
+      <a href="airport.html">Airport</a>
+      <a href="aircraft.html">Aircraft</a>
+      <a href="flight.html">Flight</a>
+      <a href="seat.html">Seat</a>
+      <a href="booking.html">Booking</a>
+      <a href="crewmember.html">Crew Member</a>
+      <a href="payment.html">Payment</a>
+      <a href="reports.html">Reports</a>
+    </nav>
+  </header>
+
+  <div class="section">
+
+    <div class="page-title" style="margin-bottom:1.5rem;">
+      <p class="eyebrow">Management</p>
+      <h1>Passenger</h1>
+    </div>
+
+    <!-- Form Card -->
+    <div class="form-panel">
+      <div class="panel-heading">
+        <h2 style="margin:0;">Passenger Details</h2>
+        <span id="form-mode-badge" class="status-pill status-current">Add Mode</span>
+      </div>
+
+      <div class="feature-grid">
+        <div>
+          <label>Passenger ID</label>
+          <input type="number" id="passenger_id" placeholder="e.g. 1001">
+        </div>
+        <div>
+          <label>First Name</label>
+          <input type="text" id="first_name" placeholder="e.g. Ahmed">
+        </div>
+        <div>
+          <label>Last Name</label>
+          <input type="text" id="last_name" placeholder="e.g. Al Mansoori">
+        </div>
+        <div>
+          <label>Gender</label>
+          <select id="gender">
+            <option value="">Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+        <div>
+          <label>Date of Birth</label>
+          <input type="date" id="date_of_birth">
+        </div>
+        <div>
+          <label>Phone</label>
+          <input type="text" id="phone" placeholder="e.g. 0501234567">
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" id="email" placeholder="e.g. ahmed@email.com">
+        </div>
+        <div>
+          <label>Passport Number</label>
+          <input type="text" id="passport_no" placeholder="e.g. A1234567">
+        </div>
+        <div>
+          <label>Nationality</label>
+          <input type="text" id="nationality" placeholder="e.g. Emirati">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:1rem;">
+        <button class="button buttonsecondary" onclick="addRecord()">Add</button>
+        <button class="button buttonsecondary" onclick="updateRecord()">Update</button>
+        <button class="button buttonprimary"   onclick="deleteRecord()">Delete</button>
+        <button class="button buttonsecondary" onclick="clearForm()">Clear</button>
+      </div>
+      <p id="form-message" class="form-message"></p>
+    </div>
+
+    <!-- Search Card -->
+    <div class="form-panel" style="margin-top:1.2rem;">
+      <h2>Search Passenger</h2>
+      <div style="display:flex;gap:0.6rem;align-items:center;">
+        <input type="number" id="searchBox" placeholder="Enter Passenger ID" style="margin-bottom:0;max-width:280px;">
+        <button onclick="searchPassenger()" class="button buttondanger">Search</button>
+      </div>
+      <p id="search-message" class="form-message"></p>
+    </div>
+
+    <div class="form-panel" style="margin-top: 1.2rem;">
+    <h2>Navigation</h2>
+    <div id="display" style="margin-bottom: 1rem; color: var(--muted);">Passenger Records</div>
+    <div style="display:flex; gap: 0.6rem; flex-wrap: wrap;">
+      <button onclick="firstRecord()" class="button buttonsecondary">First</button>
+      <button onclick="previousRecord()" class="button buttonsecondary">Previous</button>
+      <button onclick="nextRecord()" class="button buttonsecondary">Next</button>
+      <button onclick="lastRecord()" class="button buttonsecondary">Last</button>
+    </div>
+  </div>
+
+    <!-- Records Table -->
+    <div class="table-panel" style="margin-top:1.4rem;">
+      <div class="panel-heading">
+        <h2 style="margin:0;">All Passengers</h2>
+        <button class="button buttonsecondary" onclick="loadRecords()" style="padding:0.4rem 0.8rem;font-size:0.88rem;">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Gender</th>
+              <th>Date of Birth</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Passport No</th>
+              <th>Nationality</th>
+            </tr>
+          </thead>
+          <tbody id="records-body">
+            <tr><td colspan="9" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Airline System. All rights reserved.</p>
+  </footer>
+
+ <script>
+  const API = 'passenger_api.php';
+  const FIELDS = ['passenger_id','first_name','last_name','gender','date_of_birth','phone','email','passport_no','nationality'];
+
+  let records = [];       // all rows from DB
+  let currentIndex = -1;  // which row we're on
+
+  // ── Load all records ─────────────────────────────────────────────
+  async function loadRecords() {
+    const tbody = document.getElementById('records-body');
+    tbody.innerHTML = '<tr><td colspan="9" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+    try {
+      const data = await (await fetch(API + '?action=getAll')).json();
+      records = data;   // ← store globally
+      currentIndex = records.length > 0 ? 0 : -1;
+      updateDisplay();
+
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="muted" style="text-align:center;padding:2rem;">No records found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map((r, i) => `
+        <tr style="cursor:pointer;" onclick='selectRecord(${i})'>
+          <td>${r.passenger_id}</td>
+          <td>${r.first_name}</td>
+          <td>${r.last_name}</td>
+          <td>${r.gender}</td>
+          <td>${r.date_of_birth || ''}</td>
+          <td>${r.phone}</td>
+          <td>${r.email}</td>
+          <td>${r.passport_no}</td>
+          <td>${r.nationality}</td>
+        </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = '<tr><td colspan="9" style="color:var(--red-dark);text-align:center;padding:2rem;">Failed to load records.</td></tr>';
+    }
+  }
+
+  // ── Select by index (row click or navigation) ────────────────────
+  function selectRecord(index) {
+    if (records.length === 0) return;
+    currentIndex = Math.max(0, Math.min(index, records.length - 1));
+    fillForm(records[currentIndex]);
+    updateDisplay();
+    highlightRow(currentIndex);
+  }
+
+  // ── Navigation buttons ───────────────────────────────────────────
+  function firstRecord()    { selectRecord(0); }
+  function lastRecord()     { selectRecord(records.length - 1); }
+  function nextRecord()     { selectRecord(currentIndex + 1); }
+  function previousRecord() { selectRecord(currentIndex - 1); }
+
+  // ── Update the "Record X of Y" display ──────────────────────────
+  function updateDisplay() {
+    const el = document.getElementById('display');
+    if (records.length === 0) {
+      el.textContent = 'No records loaded.';
+    } else {
+      el.textContent = `Record ${currentIndex + 1} of ${records.length}`;
+    }
+  }
+
+  // ── Highlight the active row in the table ────────────────────────
+  function highlightRow(index) {
+    const rows = document.querySelectorAll('#records-body tr');
+    rows.forEach((r, i) => {
+      r.style.background = i === index ? 'var(--color-background-info)' : '';
+    });
+  }
+
+  // ── Fill form when a row is clicked ─────────────────────────────
+  function fillForm(r) {
+    FIELDS.forEach(f => document.getElementById(f).value = r[f] || '');
+    badge('Edit Mode', 'status-planned');
+    setMessage('', '');
+  }
+
+  // ── Search by ID ─────────────────────────────────────────────────
+  async function searchPassenger() {
+    const id = document.getElementById('searchBox').value;
+    if (!id) { document.getElementById('search-message').textContent = 'Enter a Passenger ID to search.'; return; }
+    try {
+      const r = await (await fetch(`${API}?action=search&passenger_id=${id}`)).json();
+      if (r.error) {
+        document.getElementById('search-message').textContent = r.error;
+        document.getElementById('search-message').className = 'form-message error';
+      } else {
+        // find index in local records array so navigation stays in sync
+        const idx = records.findIndex(p => String(p.passenger_id) === String(id));
+        if (idx !== -1) selectRecord(idx);
+        else fillForm(r);
+        document.getElementById('search-message').textContent = 'Passenger found — form filled.';
+        document.getElementById('search-message').className = 'form-message success';
+      }
+    } catch(e) {
+      document.getElementById('search-message').textContent = 'Search failed.';
+    }
+  }
+
+  // ── Add ──────────────────────────────────────────────────────────
+  async function addRecord() {
+    const fd = build('add'); if (!fd) return;
+    const data = await (await fetch(API, {method:'POST', body:fd})).json();
+    setMessage(data.message || data.error, data.success ? 'success' : 'error');
+    if (data.success) { clearForm(); loadRecords(); }
+  }
+
+  // ── Update ───────────────────────────────────────────────────────
+  async function updateRecord() {
+    const fd = build('update'); if (!fd) return;
+    const data = await (await fetch(API, {method:'POST', body:fd})).json();
+    setMessage(data.message || data.error, data.success ? 'success' : 'error');
+    if (data.success) { clearForm(); loadRecords(); }
+  }
+
+  // ── Delete ───────────────────────────────────────────────────────
+  async function deleteRecord() {
+    const id = document.getElementById('passenger_id').value;
+    if (!id) { setMessage('Click a row first to select a record.', 'error'); return; }
+    if (!confirm('Delete passenger ID ' + id + '?')) return;
+    const fd = new FormData(); fd.append('action','delete'); fd.append('passenger_id', id);
+    const data = await (await fetch(API, {method:'POST', body:fd})).json();
+    setMessage(data.message || data.error, data.success ? 'success' : 'error');
+    if (data.success) { clearForm(); loadRecords(); }
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  function build(action) {
+    for (const f of FIELDS) {
+      if (!document.getElementById(f).value) { setMessage('Please fill in all fields.', 'error'); return null; }
+    }
+    const fd = new FormData(); fd.append('action', action);
+    FIELDS.forEach(f => fd.append(f, document.getElementById(f).value));
+    return fd;
+  }
+
+  function clearForm() {
+    FIELDS.forEach(f => document.getElementById(f).value = '');
+    badge('Add Mode', 'status-current');
+    setMessage('', '');
+  }
+
+  function badge(t, c) {
+    const el = document.getElementById('form-mode-badge');
+    el.textContent = t; el.className = 'status-pill ' + c;
+  }
+
+  function setMessage(msg, type) {
+    const el = document.getElementById('form-message');
+    el.textContent = msg; el.className = 'form-message' + (type ? ' ' + type : '');
+  }
+function updateDisplay() {
+  const el = document.getElementById('display');
+  if (records.length === 0) {
+    el.textContent = 'No records loaded.';
+  } else {
+    const r = records[currentIndex];
+    el.textContent = `Record ${currentIndex + 1} of ${records.length} — ${r.first_name} ${r.last_name}`;
+  }
+}
+  loadRecords();
+</script>
+</body>
+</html>

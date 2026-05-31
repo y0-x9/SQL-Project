@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airport Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="airport">
+  <header class="site-header">
+    <a class="brand" href="index.html"><img src="assets/p1.webp" alt="Airline Logo" class="brand-logo"><span>Airline System</span></a>
+    <button class="nav-toggle" onclick="this.nextElementSibling.classList.toggle('open')">Menu</button>
+    <nav class="site-nav">
+      <a href="index.html">Home</a><a href="passenger.html">Passenger</a><a class="active" href="airport.html">Airport</a>
+      <a href="aircraft.html">Aircraft</a><a href="flight.html">Flight</a><a href="seat.html">Seat</a>
+      <a href="booking.html">Booking</a><a href="crewmember.html">Crew Member</a><a href="payment.html">Payment</a><a href="reports.html">Reports</a>
+    </nav>
+  </header>
+  <div class="section">
+    <div class="page-title" style="margin-bottom:1.5rem;"><p class="eyebrow">Management</p><h1>Airport</h1></div>
+    <div class="form-panel">
+      <div class="panel-heading">
+        <h2 style="margin:0;">Airport Details</h2>
+        <span id="form-mode-badge" class="status-pill status-current">Add Mode</span>
+      </div>
+      <div class="feature-grid">
+        <div><label>Airport Code</label><input type="text" id="airport_code" placeholder="e.g. AUH"></div>
+        <div><label>Airport Name</label><input type="text" id="airport_name" placeholder="e.g. Abu Dhabi International"></div>
+        <div><label>City</label><input type="text" id="city" placeholder="e.g. Abu Dhabi"></div>
+        <div><label>Country</label><input type="text" id="country" placeholder="e.g. UAE"></div>
+      </div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:1rem;">
+        <button class="button buttonsecondary" onclick="addRecord()">Add</button>
+        <button class="button buttonsecondary" onclick="updateRecord()">Update</button>
+        <button class="button buttonprimary" onclick="deleteRecord()">Delete</button>
+        <button class="button buttonsecondary" onclick="clearForm()">Clear</button>
+      </div>
+      <p id="form-message" class="form-message"></p>
+    </div>
+    <div class="table-panel" style="margin-top:1.4rem;">
+      <div class="panel-heading">
+        <h2 style="margin:0;">All Airports</h2>
+        <button class="button buttonsecondary" onclick="loadRecords()" style="padding:0.4rem 0.8rem;font-size:0.88rem;">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Code</th><th>Name</th><th>City</th><th>Country</th></tr></thead>
+        <tbody id="records-body"><tr><td colspan="4" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+  <footer class="site-footer"><p>&copy; 2026 Airline System. All rights reserved.</p></footer>
+  <script>
+    const API='airport_api.php';
+    async function loadRecords(){
+      const tbody=document.getElementById('records-body');
+      tbody.innerHTML='<tr><td colspan="4" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+      try{
+        const data=await(await fetch(API+'?action=getAll')).json();
+        if(!data.length){tbody.innerHTML='<tr><td colspan="4" class="muted" style="text-align:center;padding:2rem;">No records found.</td></tr>';return;}
+        tbody.innerHTML=data.map(r=>`<tr style="cursor:pointer;" onclick='fillForm(${JSON.stringify(r)})'><td>${r.airport_code}</td><td>${r.airport_name}</td><td>${r.city}</td><td>${r.country}</td></tr>`).join('');
+      }catch(e){tbody.innerHTML='<tr><td colspan="4" style="color:var(--red-dark);text-align:center;padding:2rem;">Failed to load records.</td></tr>';}
+    }
+    function fillForm(r){
+      document.getElementById('airport_code').value=r.airport_code;
+      document.getElementById('airport_name').value=r.airport_name;
+      document.getElementById('city').value=r.city;
+      document.getElementById('country').value=r.country;
+      document.getElementById('form-mode-badge').textContent='Edit Mode';
+      document.getElementById('form-mode-badge').className='status-pill status-planned';
+      setMessage('','');
+    }
+    async function addRecord(){
+      const fields=['airport_code','airport_name','city','country'];
+      for(const f of fields){if(!document.getElementById(f).value){setMessage('Please fill in all fields.','error');return;}}
+      const fd=new FormData();fd.append('action','add');fields.forEach(f=>fd.append(f,document.getElementById(f).value));
+      const data=await(await fetch(API,{method:'POST',body:fd})).json();
+      setMessage(data.message||data.error,data.success?'success':'error');
+      if(data.success){clearForm();loadRecords();}
+    }
+    async function updateRecord(){
+      const fields=['airport_code','airport_name','city','country'];
+      for(const f of fields){if(!document.getElementById(f).value){setMessage('Please fill in all fields.','error');return;}}
+      const fd=new FormData();fd.append('action','update');fields.forEach(f=>fd.append(f,document.getElementById(f).value));
+      const data=await(await fetch(API,{method:'POST',body:fd})).json();
+      setMessage(data.message||data.error,data.success?'success':'error');
+      if(data.success){clearForm();loadRecords();}
+    }
+    async function deleteRecord(){
+      const id=document.getElementById('airport_code').value;
+      if(!id){setMessage('Click a row first to select a record.','error');return;}
+      if(!confirm('Delete airport '+id+'?'))return;
+      const fd=new FormData();fd.append('action','delete');fd.append('airport_code',id);
+      const data=await(await fetch(API,{method:'POST',body:fd})).json();
+      setMessage(data.message||data.error,data.success?'success':'error');
+      if(data.success){clearForm();loadRecords();}
+    }
+    function clearForm(){
+      ['airport_code','airport_name','city','country'].forEach(f=>document.getElementById(f).value='');
+      document.getElementById('form-mode-badge').textContent='Add Mode';
+      document.getElementById('form-mode-badge').className='status-pill status-current';
+      setMessage('','');
+    }
+    function setMessage(msg,type){const el=document.getElementById('form-message');el.textContent=msg;el.className='form-message'+(type?' '+type:'');}
+    loadRecords();
+  </script>
+</body>
+</html>

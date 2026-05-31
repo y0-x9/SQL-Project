@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="reports">
+  <header class="site-header">
+    <a class="brand" href="index.html"><img src="assets/p1.webp" alt="Airline Logo" class="brand-logo"><span>Airline System</span></a>
+    <button class="nav-toggle" onclick="this.nextElementSibling.classList.toggle('open')">Menu</button>
+    <nav class="site-nav">
+      <a href="index.html">Home</a>
+      <a href="passenger.html">Passenger</a>
+      <a href="airport.html">Airport</a>
+      <a href="aircraft.html">Aircraft</a>
+      <a href="flight.html">Flight</a>
+      <a href="seat.html">Seat</a>
+      <a href="booking.html">Booking</a>
+      <a href="crewmember.html">Crew Member</a>
+      <a href="payment.html">Payment</a>
+      <a class="active" href="reports.html">Reports</a>
+    </nav>
+  </header>
+
+  <div class="section">
+    <div class="page-title" style="margin-bottom:1.5rem;">
+      <p class="eyebrow">Analytics</p>
+      <h1>Reports</h1>
+      <p>Live summaries and statistics from your airline database.</p>
+    </div>
+
+    <!-- Report Selector -->
+    <div class="filter-bar" style="margin-bottom:1.4rem;">
+      <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;">
+        <label style="margin:0;">Select Report</label>
+        <select id="report-select" onchange="onReportChange()" style="margin:0;max-width:320px;">
+          <option value="">-- Choose a Report --</option>
+          <option value="bookings_by_status">Bookings by Status</option>
+          <option value="payments_summary">Payments Summary</option>
+          <option value="revenue_by_date">Revenue by Date Range</option>
+          <option value="flights_by_status">Flights by Status</option>
+          <option value="flights_by_date">Flights by Date Range</option>
+          <option value="aircraft_by_status">Aircraft by Status</option>
+          <option value="crew_by_role">Crew Members by Role</option>
+          <option value="airports_by_country">Airports by Country</option>
+          <option value="seats_summary">Seats Summary</option>
+          <option value="top_passengers">Passenger Spending</option>
+        </select>
+      </div>
+
+      <!-- Date range filters (shown only for date reports) -->
+      <div id="date-filters" style="display:none;gap:0.8rem;align-items:center;flex-wrap:wrap;">
+        <label style="margin:0;">From</label>
+        <input type="date" id="date-from" style="margin:0;max-width:180px;">
+        <label style="margin:0;">To</label>
+        <input type="date" id="date-to" style="margin:0;max-width:180px;">
+        <button class="button buttonsecondary" onclick="runReport()" style="padding:0.5rem 1rem;">Run</button>
+      </div>
+    </div>
+
+    <!-- Stats cards row -->
+    <div id="stats-row" class="stats-grid" style="display:none;margin-bottom:1.4rem;padding:0;"></div>
+
+    <!-- Report table -->
+    <div id="report-panel" class="table-panel" style="display:none;">
+      <div class="panel-heading">
+        <h2 id="report-title" style="margin:0;"></h2>
+        <button class="button buttonsecondary" onclick="runReport()" style="padding:0.4rem 0.8rem;font-size:0.88rem;">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table id="report-table">
+          <thead id="report-head"></thead>
+          <tbody id="report-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="form-panel" style="text-align:center;padding:3rem;color:var(--muted);">
+      <p style="font-size:1.1rem;">Select a report from the dropdown above to get started.</p>
+    </div>
+
+  </div>
+
+  <footer class="site-footer"><p>&copy; 2026 Airline System. All rights reserved.</p></footer>
+
+  <script>
+    const API = 'reports_api.php';
+
+    // Report definitions: headers, columns, title, stats
+    const REPORTS = {
+      bookings_by_status: {
+        title: 'Bookings by Status',
+        headers: ['Status','Total Bookings','Total Revenue (AED)'],
+        cols: ['booking_status','total','revenue'],
+        stats: (data) => [
+          { label:'Total Bookings', value: data.reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Total Revenue', value: 'AED '+data.reduce((s,r)=>s+parseFloat(r.revenue||0),0).toFixed(2) },
+          { label:'Statuses', value: data.length }
+        ]
+      },
+      payments_summary: {
+        title: 'Payments Summary',
+        headers: ['Method','Status','Count','Total Amount (AED)'],
+        cols: ['payment_method','payment_status','total','total_amount'],
+        stats: (data) => [
+          { label:'Total Payments', value: data.reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Total Collected', value: 'AED '+data.filter(r=>r.payment_status==='Paid').reduce((s,r)=>s+parseFloat(r.total_amount||0),0).toFixed(2) },
+          { label:'Pending Amount', value: 'AED '+data.filter(r=>r.payment_status==='Pending').reduce((s,r)=>s+parseFloat(r.total_amount||0),0).toFixed(2) }
+        ]
+      },
+      revenue_by_date: {
+        title: 'Revenue by Date',
+        headers: ['Date','Total Payments','Total Revenue (AED)'],
+        cols: ['date','total_payments','total_revenue'],
+        stats: (data) => [
+          { label:'Days', value: data.length },
+          { label:'Total Revenue', value: 'AED '+data.reduce((s,r)=>s+parseFloat(r.total_revenue||0),0).toFixed(2) },
+          { label:'Total Payments', value: data.reduce((s,r)=>s+parseInt(r.total_payments),0) }
+        ]
+      },
+      flights_by_status: {
+        title: 'Flights by Status',
+        headers: ['Status','Total Flights'],
+        cols: ['status','total'],
+        stats: (data) => [
+          { label:'Total Flights', value: data.reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Scheduled', value: (data.find(r=>r.status==='Scheduled')||{total:0}).total },
+          { label:'Cancelled', value: (data.find(r=>r.status==='Cancelled')||{total:0}).total }
+        ]
+      },
+      flights_by_date: {
+        title: 'Flights by Date Range',
+        headers: ['Flight No','Departure','Arrival','Status','Aircraft','Origin','Destination'],
+        cols: ['flight_no','departure_datetime','arrival_datetime','status','aircraft','origin','destination'],
+        stats: (data) => [
+          { label:'Total Flights', value: data.length },
+          { label:'Scheduled', value: data.filter(r=>r.status==='Scheduled').length },
+          { label:'Delayed/Cancelled', value: data.filter(r=>r.status==='Delayed'||r.status==='Cancelled').length }
+        ]
+      },
+      aircraft_by_status: {
+        title: 'Aircraft by Status',
+        headers: ['Status','Total Aircraft','Total Capacity'],
+        cols: ['status','total','total_capacity'],
+        stats: (data) => [
+          { label:'Total Aircraft', value: data.reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Active', value: (data.find(r=>r.status==='Active')||{total:0}).total },
+          { label:'Total Capacity', value: data.reduce((s,r)=>s+parseInt(r.total_capacity||0),0)+' seats' }
+        ]
+      },
+      crew_by_role: {
+        title: 'Crew Members by Role',
+        headers: ['Role','Status','Total'],
+        cols: ['role','status','total'],
+        stats: (data) => [
+          { label:'Total Crew', value: data.reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Active', value: data.filter(r=>r.status==='Active').reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Roles', value: [...new Set(data.map(r=>r.role))].length }
+        ]
+      },
+      airports_by_country: {
+        title: 'Airports by Country',
+        headers: ['Country','Total Airports'],
+        cols: ['country','total'],
+        stats: (data) => [
+          { label:'Total Airports', value: data.reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Countries', value: data.length },
+          { label:'Top Country', value: data[0]?.country || '-' }
+        ]
+      },
+      seats_summary: {
+        title: 'Seats Summary',
+        headers: ['Class','Availability','Total Seats'],
+        cols: ['class_type','availability_status','total'],
+        stats: (data) => [
+          { label:'Total Seats', value: data.reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Available', value: data.filter(r=>r.availability_status==='Available').reduce((s,r)=>s+parseInt(r.total),0) },
+          { label:'Booked', value: data.filter(r=>r.availability_status==='Booked').reduce((s,r)=>s+parseInt(r.total),0) }
+        ]
+      },
+      top_passengers: {
+        title: 'Passenger Spending',
+        headers: ['ID','First Name','Last Name','Nationality','Total Bookings','Total Spent (AED)'],
+        cols: ['passenger_id','first_name','last_name','nationality','total_bookings','total_spent'],
+        stats: (data) => [
+          { label:'Total Passengers', value: data.length },
+          { label:'Top Spender', value: data[0]?.first_name+' '+data[0]?.last_name || '-' },
+          { label:'Total Revenue', value: 'AED '+data.reduce((s,r)=>s+parseFloat(r.total_spent||0),0).toFixed(2) }
+        ]
+      }
+    };
+
+    function onReportChange() {
+      const val = document.getElementById('report-select').value;
+      if (!val) return;
+      const needsDate = val === 'revenue_by_date' || val === 'flights_by_date';
+      document.getElementById('date-filters').style.display = needsDate ? 'flex' : 'none';
+      if (!needsDate) runReport();
+    }
+
+    async function runReport() {
+      const val = document.getElementById('report-select').value;
+      if (!val) return;
+
+      const def = REPORTS[val];
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('report-panel').style.display = 'block';
+      document.getElementById('report-title').textContent = def.title;
+      document.getElementById('report-body').innerHTML = '<tr><td colspan="'+def.headers.length+'" class="muted" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+      document.getElementById('stats-row').style.display = 'none';
+
+      let url = API + '?action=' + val;
+      const from = document.getElementById('date-from').value;
+      const to   = document.getElementById('date-to').value;
+      if (from) url += '&from=' + from;
+      if (to)   url += '&to='   + to;
+
+      try {
+        const data = await (await fetch(url)).json();
+
+        // Stats cards
+        if (def.stats) {
+          const stats = def.stats(data);
+          const row = document.getElementById('stats-row');
+          row.style.display = 'grid';
+          row.innerHTML = stats.map(s=>`
+            <div class="stat">
+              <span>${s.value}</span>
+              <p>${s.label}</p>
+            </div>`).join('');
+        }
+
+        // Table headers
+        document.getElementById('report-head').innerHTML =
+          '<tr>' + def.headers.map(h=>`<th>${h}</th>`).join('') + '</tr>';
+
+        // Table rows
+        if (!data.length) {
+          document.getElementById('report-body').innerHTML =
+            '<tr><td colspan="'+def.headers.length+'" class="muted" style="text-align:center;padding:2rem;">No data found.</td></tr>';
+          return;
+        }
+
+        document.getElementById('report-body').innerHTML = data.map(r=>
+          '<tr>' + def.cols.map(c=>`<td>${formatCell(c, r[c])}</td>`).join('') + '</tr>'
+        ).join('');
+
+      } catch(e) {
+        document.getElementById('report-body').innerHTML =
+          '<tr><td colspan="'+def.headers.length+'" style="color:var(--red-dark);text-align:center;padding:2rem;">Failed to load report.</td></tr>';
+      }
+    }
+
+    function formatCell(col, val) {
+      if (val === null || val === undefined) return '-';
+      if (col === 'status' || col === 'booking_status' || col === 'payment_status' || col === 'availability_status') {
+        const cls = val==='Active'||val==='Confirmed'||val==='Paid'||val==='Available'||val==='Scheduled' ? 'status-completed'
+                  : val==='Maintenance'||val==='Pending'||val==='Reserved'||val==='Delayed' ? 'status-current'
+                  : 'status-planned';
+        return `<span class="status-pill ${cls}">${val}</span>`;
+      }
+      if (col === 'revenue' || col === 'total_amount' || col === 'total_revenue' || col === 'total_spent') {
+        return 'AED ' + parseFloat(val).toFixed(2);
+      }
+      return val;
+    }
+  </script>
+</body>
+</html>
